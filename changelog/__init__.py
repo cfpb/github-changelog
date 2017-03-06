@@ -171,15 +171,21 @@ def main():
                         help='current release tag (defaults to HEAD)')
     parser.add_argument('-m', '--markdown', action='store_true',
                         help='output in markdown')
+    parser.add_argument('-s', '--single-line', action='store_true',
+                        help='output as single line joined by \\n characters')
 
     args = parser.parse_args()
 
     prs = fetch_changes(args.owner, args.repo, args.previous_tag,
                         current_tag=args.current_tag)
 
-    for line in format_changes(args.owner, args.repo, prs,
-                               markdown=args.markdown):
-        print(line)
+    lines = format_changes(args.owner, args.repo, prs, markdown=args.markdown)
+
+    if not args.single_line:
+        for line in lines:
+            print(line)
+    else:
+        print('\\n'.join(lines))
 
 
 if __name__ == '__main__':
