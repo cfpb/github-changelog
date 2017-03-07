@@ -69,6 +69,15 @@ def get_last_commit(owner, repo, branch='master'):
     return commits_json[0]['sha']
 
 
+def get_last_tag(owner, repo):
+    """ Get the last tag for the given repo """
+    tags_url = '/'.join([GITHUB_API_URL, 'repos', owner, repo, 'tags'])
+    tags_response = requests.get(tags_url, headers=GITHUB_HEADERS)
+    tags_response.raise_for_status()
+    tags_json = tags_response.json()
+    return tags_json[0]['name']
+
+
 def get_commits_between(owner, repo, first_commit, last_commit):
     """ Get a list of commits between two commits """
     commits_url = '/'.join([
@@ -113,8 +122,10 @@ def extract_pr(message):
     return PullRequest(pr_number, title)
 
 
-def fetch_changes(owner, repo, previous_tag, current_tag=None,
+def fetch_changes(owner, repo, previous_tag=None, current_tag=None,
                   branch='master'):
+    if previous_tag is None:
+        previous_tag = get_last_tag(owner, repo)
     previous_commit = get_commit_for_tag(owner, repo, previous_tag)
 
     current_commit = None
@@ -165,8 +176,8 @@ def main():
                         help='owner of the repo on GitHub')
     parser.add_argument('repo', metavar='REPO',
                         help='name of the repo on GitHub')
-    parser.add_argument('previous_tag', metavar='PREVIOUS',
-                        help='previous release tag')
+    parser.add_argument('previous_tag', metavar='PREVIOUS', nargs='?',
+                        help='previous release tag (defaults to last tag)')
     parser.add_argument('current_tag', metavar='CURRENT', nargs='?',
                         help='current release tag (defaults to HEAD)')
     parser.add_argument('-m', '--markdown', action='store_true',
@@ -176,7 +187,7 @@ def main():
 
     args = parser.parse_args()
 
-    prs = fetch_changes(args.owner, args.repo, args.previous_tag,
+    prs = fetch_changes(args.owner, args.repo, previous_tag=args.previous_tag,
                         current_tag=args.current_tag)
 
     lines = format_changes(args.owner, args.repo, prs, markdown=args.markdown)
