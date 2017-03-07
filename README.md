@@ -16,12 +16,18 @@ pip install git+https://github.com/cfpb/github-changelog
 ## Using
 
 ```
-changelog [-h] [-m] OWNER REPO PREVIOUS [CURRENT]
+changelog [-h] [-m] OWNER REPO [PREVIOUS] [CURRENT]
 ```
 
-The `changelog` command that takes a GitHub repository owner (user or organization), repository name, and at least one tag as arguments. With those arguments it will list all GitHub pull requests that have been merged between the given tags or between the tag and `HEAD` if only one tag is given. If `-m` is specified the output will be formatted in markdown and include links to the pull requests.
+The `changelog` command takes a GitHub repository owner (user or organization), repository name and zero, one, or two tags to limit the set of changes to consider. If no tags are provided, the changelog will be computed between the latest tag and `HEAD`. One tag may be provided to set the base tag to compare against `HEAD`. Two tags may be provided to specify both base tag and ending tag. The generated changelog will list all GitHub pull requests that have been merged between the specified or inferred tags. If `-m` is specified the output will be formatted in markdown and include links to the pull requests.
 
 ### Examples
+
+```
+changelog cfpb github-changelog
+```
+
+Will generate a text changelog between the latest tag and `HEAD`.
 
 ```
 changelog cfpb github-changelog 1.0.0

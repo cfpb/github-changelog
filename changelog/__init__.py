@@ -168,6 +168,16 @@ def format_changes(owner, repo, prs, markdown=False):
     return lines
 
 
+def generate_changelog(owner, repo, previous_tag=None, current_tag=None,
+                       markdown=False, single_line=False):
+
+    prs = fetch_changes(owner, repo, previous_tag, current_tag)
+    lines = format_changes(owner, repo, prs, markdown=markdown)
+
+    separator = '\\n' if single_line else '\n'
+    return separator.join(lines)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Generate a CHANGELOG between two git tags based on GitHub"
@@ -187,16 +197,8 @@ def main():
 
     args = parser.parse_args()
 
-    prs = fetch_changes(args.owner, args.repo, previous_tag=args.previous_tag,
-                        current_tag=args.current_tag)
-
-    lines = format_changes(args.owner, args.repo, prs, markdown=args.markdown)
-
-    if not args.single_line:
-        for line in lines:
-            print(line)
-    else:
-        print('\\n'.join(lines))
+    changelog = generate_changelog(**vars(args))
+    print(changelog)
 
 
 if __name__ == '__main__':
