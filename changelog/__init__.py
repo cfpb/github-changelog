@@ -23,6 +23,8 @@ PullRequest = namedtuple('PullRequest', ['number', 'title'])
 
 # Merge commits use a double linebreak between the branch name and the title
 MERGE_PR_RE = re.compile(r'^Merge pull request #([0-9]+) from .*\n\n(.*)')
+
+# Squash-and-merge commits use the PR title with the number in parentheses
 SQUASH_PR_RE = re.compile(r'^(.*) \(#([0-9]+)\)\n\n.*')
 
 
