@@ -9,6 +9,7 @@ from changelog import (
     get_commit_for_tag,
     get_last_commit,
     get_commits_between,
+    is_pr,
     extract_pr,
 )
 
@@ -119,21 +120,59 @@ class TestChangelog(TestCase):
         with self.assertRaises(GitHubError):
             get_commits_between('someone', 'one-repo', 'one', 'two')
 
-    def test_extract_pr(self):
-        """ Test our PR formatter """
+    def test_is_pr_merge(self):
+        """ Test our PR extractor with merge PRa """
+        message = 'Merge pull request #1234 from some/branch\n\nMy Title'
+        self.assertTrue(is_pr(message))
+
+    def test_is_pr_squash(self):
+        """ Test our PR extractor with squash-and-merge PR """
+        message = 'My Title (#1234)\n\nMy description'
+        self.assertTrue(is_pr(message))
+
+    def test_is_pr_not_pr(self):
+        """ Test our PR extractor with non-PR message """
+        message = 'I made some changes!'
+        self.assertFalse(is_pr(message))
+
+    def test_is_pr_no_number(self):
+        """ Test our PR extractor with non-PR message """
+        message = 'Merge pull request from some/branch\n\nMy Title'
+        self.assertFalse(is_pr(message))
+
+    def test_is_pr_not_squash(self):
+        """ Test our PR extractor with non-squashed PR message """
+        message = 'Some title addresses bug (#345)'
+        self.assertFalse(is_pr(message))
+
+    def test_extract_pr_merge(self):
+        """ Test our PR extractor with merge PRa """
         message = 'Merge pull request #1234 from some/branch\n\nMy Title'
         result = extract_pr(message)
         self.assertEqual(result.number, '1234')
         self.assertEqual(result.title, 'My Title')
 
+    def test_extract_pr_squash(self):
+        """ Test our PR extractor with squash-and-merge PR """
+        message = 'My Title (#1234)\n\nMy description'
+        result = extract_pr(message)
+        self.assertEqual(result.number, '1234')
+        self.assertEqual(result.title, 'My Title')
+
     def test_extract_pr_not_pr(self):
-        """ Test our PR formatter with non-PR message """
+        """ Test our PR extractor with non-PR message """
         message = 'I made some changes!'
         with self.assertRaises(Exception):
             extract_pr(message)
 
     def test_extract_pr_no_number(self):
-        """ Test our PR formatter with non-PR message """
+        """ Test our PR extractor with non-PR message """
         message = 'Merge pull request from some/branch\n\nMy Title'
+        with self.assertRaises(Exception):
+            extract_pr(message)
+
+    def test_extract_pr_not_squash(self):
+        """ Test our PR extractor with non-squashed PR message """
+        message = 'Some title addresses bug (#345)'
         with self.assertRaises(Exception):
             extract_pr(message)
