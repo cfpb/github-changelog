@@ -21,6 +21,8 @@ changelog [-h] [-m] OWNER REPO [PREVIOUS] [CURRENT]
 
 The `changelog` command takes a GitHub repository owner (user or organization), repository name and zero, one, or two tags to limit the set of changes to consider. If no tags are provided, the changelog will be computed between the latest tag and `HEAD`. One tag may be provided to set the base tag to compare against `HEAD`. Two tags may be provided to specify both base tag and ending tag. The generated changelog will list all GitHub pull requests that have been merged between the specified or inferred tags. If `-m` is specified the output will be formatted in markdown and include links to the pull requests.
 
+Pull request merges are identified by their commit message, usually taking the form of `Merge pull request #123…`. Pull requests merged with "Squash and merge" are not currently supported.
+
 ### Examples
 
 ```
