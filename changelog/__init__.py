@@ -21,6 +21,12 @@ if GITHUB_API_TOKEN is not None:
 Commit = namedtuple('Commit', ['sha', 'message'])
 PullRequest = namedtuple('PullRequest', ['number', 'title'])
 
+# Merge commits use a double linebreak between the branch name and the title
+MERGE_PR_RE = re.compile(r'^Merge pull request #([0-9]+) from .*\n\n(.*)')
+
+# Squash-and-merge commits use the PR title with the number in parentheses
+SQUASH_PR_RE = re.compile(r'^(.*) \(#([0-9]+)\)\n\n.*')
+
 
 class GitHubError(Exception):
     pass
@@ -103,23 +109,24 @@ def get_commits_between(owner, repo, first_commit, last_commit):
     return commits
 
 
+def is_pr(message):
+    """ Determine whether or not a commit message is a PR merge """
+    return MERGE_PR_RE.search(message) or SQUASH_PR_RE.search(message)
+
+
 def extract_pr(message):
     """ Given a PR merge commit message, extract the PR number and title """
-    if 'Merge pull request' not in message:
-        raise Exception("Commit isn't a PR merge, {}".format(message))
+    merge_match = MERGE_PR_RE.match(message)
+    squash_match = SQUASH_PR_RE.match(message)
 
-    # PR merge commits use a double line-break between the branch name
-    # and the PR title
-    merge, title = message.split('\n\n')
+    if merge_match is not None:
+        number, title = merge_match.groups()
+        return PullRequest(number=number, title=title)
+    elif squash_match is not None:
+        title, number = squash_match.groups()
+        return PullRequest(number=number, title=title)
 
-    # Find the PR number
-    number_match = re.search(r'#([0-9]+)', merge)
-    if number_match is None or len(number_match.groups()) == 0:
-        raise Exception("Unable to find PR number in {}".format(merge))
-    pr_number = number_match.groups()[0]
-
-    # Output the PR number and title
-    return PullRequest(pr_number, title)
+    raise Exception("Commit isn't a PR merge, {}".format(message))
 
 
 def fetch_changes(owner, repo, previous_tag=None, current_tag=None,
@@ -138,11 +145,7 @@ def fetch_changes(owner, repo, previous_tag=None, current_tag=None,
                                           previous_commit, current_commit)
 
     # Process the commit list looking for PR merges
-    # Look for PR merge commits
-    prs = []
-    for commit in commits_between:
-        if 'Merge pull request' in commit.message:
-            prs.append(extract_pr(commit.message))
+    prs = [extract_pr(c.message) for c in commits_between if is_pr(c.message)]
 
     if len(prs) == 0 and len(commits_between) > 0:
         raise Exception("Lots of commits and no PRs on branch {}".format(

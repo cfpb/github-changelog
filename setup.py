@@ -5,7 +5,7 @@ setup(
     url='https://github.com/cfpb/github-changelog',
     author='CFPB',
     license='CC0',
-    version='1.0.0',
+    version='1.1.0',
     include_package_data=True,
     packages=find_packages(),
     install_requires=[
