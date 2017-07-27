@@ -140,10 +140,10 @@ class TestChangelog(TestCase):
         message = 'Merge pull request from some/branch\n\nMy Title'
         self.assertFalse(is_pr(message))
 
-    def test_is_pr_not_squash(self):
+    def test_is_pr_potential_squash(self):
         """ Test our PR extractor with non-squashed PR message """
         message = 'Some title addresses bug (#345)'
-        self.assertFalse(is_pr(message))
+        self.assertTrue(is_pr(message))
 
     def test_extract_pr_merge(self):
         """ Test our PR extractor with merge PRa """
@@ -171,8 +171,9 @@ class TestChangelog(TestCase):
         with self.assertRaises(Exception):
             extract_pr(message)
 
-    def test_extract_pr_not_squash(self):
+    def test_extract_pr_potential_squash(self):
         """ Test our PR extractor with non-squashed PR message """
         message = 'Some title addresses bug (#345)'
-        with self.assertRaises(Exception):
-            extract_pr(message)
+        result = extract_pr(message)
+        self.assertEqual(result.number, '345')
+        self.assertEqual(result.title, 'Some title addresses bug')
