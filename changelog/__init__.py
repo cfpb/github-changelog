@@ -12,11 +12,9 @@ from collections import namedtuple
 
 import requests
 
-GITHUB_API_URL = 'https://api.github.com'
-GITHUB_API_TOKEN = os.environ.get('GITHUB_API_TOKEN', None)
-GITHUB_HEADERS = {}
-if GITHUB_API_TOKEN is not None:
-    GITHUB_HEADERS['Authorization'] = 'token ' + GITHUB_API_TOKEN
+PUBLIC_GITHUB_URL = 'https://github.com'
+PUBLIC_GITHUB_API_URL = 'https://api.github.com'
+GitHubConfig = namedtuple('GitHubConfig', ['base_url', 'api_url', 'headers'])
 
 Commit = namedtuple('Commit', ['sha', 'message'])
 PullRequest = namedtuple('PullRequest', ['number', 'title'])
@@ -32,10 +30,23 @@ class GitHubError(Exception):
     pass
 
 
-def get_commit_for_tag(owner, repo, tag):
+def get_github_config(github_base_url, github_api_url, token):
+    """ Returns a GitHubConfig instance based on the given arguments """
+    if token is None:
+        token = os.environ.get('GITHUB_API_TOKEN')
+
+    headers = {}
+    if token is not None:
+        headers['Authorization'] = 'token ' + token
+
+    return GitHubConfig(base_url=github_base_url, api_url=github_api_url,
+                        headers=headers)
+
+
+def get_commit_for_tag(github_config, owner, repo, tag):
     """ Get the commit sha for a given git tag """
     tag_url = '/'.join([
-        GITHUB_API_URL,
+        github_config.api_url,
         'repos',
         owner, repo,
         'git', 'refs', 'tags', tag
@@ -43,7 +54,7 @@ def get_commit_for_tag(owner, repo, tag):
     tag_json = {}
 
     while 'object' not in tag_json or tag_json['object']['type'] != 'commit':
-        tag_response = requests.get(tag_url, headers=GITHUB_HEADERS)
+        tag_response = requests.get(tag_url, headers=github_config.headers)
         tag_json = tag_response.json()
 
         if tag_response.status_code != 200:
@@ -57,16 +68,16 @@ def get_commit_for_tag(owner, repo, tag):
     return tag_json['object']['sha']
 
 
-def get_last_commit(owner, repo, branch='master'):
+def get_last_commit(github_config, owner, repo, branch='master'):
     """ Get the last commit sha for the given repo and branch """
     commits_url = '/'.join([
-        GITHUB_API_URL,
+        github_config.api_url,
         'repos',
         owner, repo,
         'commits'
     ])
     commits_response = requests.get(commits_url, params={'sha': 'master'},
-                                    headers=GITHUB_HEADERS)
+                                    headers=github_config.headers)
     commits_json = commits_response.json()
     if commits_response.status_code != 200:
         raise GitHubError("Unable to get commits. {}".format(
@@ -75,26 +86,26 @@ def get_last_commit(owner, repo, branch='master'):
     return commits_json[0]['sha']
 
 
-def get_last_tag(owner, repo):
+def get_last_tag(github_config, owner, repo):
     """ Get the last tag for the given repo """
-    tags_url = '/'.join([GITHUB_API_URL, 'repos', owner, repo, 'tags'])
-    tags_response = requests.get(tags_url, headers=GITHUB_HEADERS)
+    tags_url = '/'.join([github_config.api_url, 'repos', owner, repo, 'tags'])
+    tags_response = requests.get(tags_url, headers=github_config.headers)
     tags_response.raise_for_status()
     tags_json = tags_response.json()
     return tags_json[0]['name']
 
 
-def get_commits_between(owner, repo, first_commit, last_commit):
+def get_commits_between(github_config, owner, repo, first_commit, last_commit):
     """ Get a list of commits between two commits """
     commits_url = '/'.join([
-        GITHUB_API_URL,
+        github_config.api_url,
         'repos',
         owner, repo,
         'compare',
         first_commit + '...' + last_commit
     ])
     commits_response = requests.get(commits_url, params={'sha': 'master'},
-                                    headers=GITHUB_HEADERS)
+                                    headers=github_config.headers)
     commits_json = commits_response.json()
     if commits_response.status_code != 200:
         raise GitHubError("Unable to get commits between {} and {}. {}".format(
@@ -129,19 +140,21 @@ def extract_pr(message):
     raise Exception("Commit isn't a PR merge, {}".format(message))
 
 
-def fetch_changes(owner, repo, previous_tag=None, current_tag=None,
-                  branch='master'):
+def fetch_changes(github_config, owner, repo, previous_tag=None,
+                  current_tag=None, branch='master'):
     if previous_tag is None:
-        previous_tag = get_last_tag(owner, repo)
-    previous_commit = get_commit_for_tag(owner, repo, previous_tag)
+        previous_tag = get_last_tag(github_config, owner, repo)
+    previous_commit = get_commit_for_tag(github_config, owner, repo,
+                                         previous_tag)
 
     current_commit = None
     if current_tag is not None:
-        current_commit = get_commit_for_tag(owner, repo, current_tag)
+        current_commit = get_commit_for_tag(github_config, owner, repo,
+                                            current_tag)
     else:
-        current_commit = get_last_commit(owner, repo, branch)
+        current_commit = get_last_commit(github_config, owner, repo, branch)
 
-    commits_between = get_commits_between(owner, repo,
+    commits_between = get_commits_between(github_config, owner, repo,
                                           previous_commit, current_commit)
 
     # Process the commit list looking for PR merges
@@ -155,14 +168,15 @@ def fetch_changes(owner, repo, previous_tag=None, current_tag=None,
     return prs
 
 
-def format_changes(owner, repo, prs, markdown=False):
+def format_changes(github_config, owner, repo, prs, markdown=False):
     """ Format the list of prs in either text or markdown """
     lines = []
     for pr in prs:
         number = '#{number}'.format(number=pr.number)
         if markdown:
-            link = 'https://github.com/{owner}/{repo}/pull/{number}'.format(
-                owner=owner, repo=repo, number=pr.number)
+            link = '{github_url}/{owner}/{repo}/pull/{number}'.format(
+                github_url=github_config.base_url, owner=owner, repo=repo,
+                number=pr.number)
             number = '[{number}]({link})'.format(number=number, link=link)
 
         lines.append('- {title} {number}'.format(title=pr.title,
@@ -172,10 +186,14 @@ def format_changes(owner, repo, prs, markdown=False):
 
 
 def generate_changelog(owner, repo, previous_tag=None, current_tag=None,
-                       markdown=False, single_line=False):
+                       markdown=False, single_line=False, github_base_url=None,
+                       github_api_url=None, github_token=None):
 
-    prs = fetch_changes(owner, repo, previous_tag, current_tag)
-    lines = format_changes(owner, repo, prs, markdown=markdown)
+    github_config = get_github_config(github_base_url, github_api_url,
+                                      github_token)
+
+    prs = fetch_changes(github_config, owner, repo, previous_tag, current_tag)
+    lines = format_changes(github_config, owner, repo, prs, markdown=markdown)
 
     separator = '\\n' if single_line else '\n'
     return separator.join(lines)
@@ -197,6 +215,17 @@ def main():
                         help='output in markdown')
     parser.add_argument('-s', '--single-line', action='store_true',
                         help='output as single line joined by \\n characters')
+    parser.add_argument('--github-base-url', type=str, action='store',
+                        default=PUBLIC_GITHUB_URL, help='Override if you '
+                        'are using GitHub Enterprise. e.g. https://my-company'
+                        '.github.com')
+    parser.add_argument('--github-api-url', type=str, action='store',
+                        default=PUBLIC_GITHUB_API_URL, help='Override if you '
+                        'are using GitHub Enterprise. e.g. https://my-company'
+                        '.github.com/api/v3')
+    parser.add_argument('--github-token', type=str, action='store',
+                        default=None, help='GitHub oauth token to auth '
+                        'your Github requests with')
 
     args = parser.parse_args()
 
