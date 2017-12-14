@@ -217,12 +217,12 @@ def main():
                         help='output as single line joined by \\n characters')
     parser.add_argument('--github-base-url', type=str, action='store',
                         default=PUBLIC_GITHUB_URL, help='Override if you '
-                        'are using GitHub Enterprise. e.g. https://my-company'
-                        '.github.com')
+                        'are using GitHub Enterprise. e.g. https://github.'
+                        'my-company.com')
     parser.add_argument('--github-api-url', type=str, action='store',
                         default=PUBLIC_GITHUB_API_URL, help='Override if you '
-                        'are using GitHub Enterprise. e.g. https://my-company'
-                        '.github.com/api/v3')
+                        'are using GitHub Enterprise. e.g. https://github.'
+                        'my-company.com/api/v3')
     parser.add_argument('--github-token', type=str, action='store',
                         default=None, help='GitHub oauth token to auth '
                         'your Github requests with')

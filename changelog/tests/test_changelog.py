@@ -220,14 +220,14 @@ class TestChangelog(TestCase):
 
     def test_format_changes_uses_correct_base_url(self):
         """ Test format_changes() with a custom GitHub base url """
-        github_config = get_github_config('https://company.github.com',
-                                          'https://company.github.com/api/v3',
+        github_config = get_github_config('https://github.company.com',
+                                          'https://github.company.com/api/v3',
                                           token=None)
         prs = [PullRequest(1, 'first'), PullRequest(2, 'second')]
         actual = format_changes(github_config, 'owner', 'a-repo', prs,
                                 markdown=True)
         expected = [
-            '- first [#1](https://company.github.com/owner/a-repo/pull/1)',
-            '- second [#2](https://company.github.com/owner/a-repo/pull/2)'
+            '- first [#1](https://github.company.com/owner/a-repo/pull/1)',
+            '- second [#2](https://github.company.com/owner/a-repo/pull/2)'
         ]
         self.assertEqual(actual, expected)

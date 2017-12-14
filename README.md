@@ -49,8 +49,8 @@ Use the optional `--github-base-url`, `--github-api-url`, and `--github-token` a
 
 ```bash
 changelog owner some-repo \
---github-base-url "https://company.github.com" \
---github-api-url "https://company.github.com/api/v3" \
+--github-base-url "https://github.company.com" \
+--github-api-url "https://github.company.com/api/v3" \
 --github-token secret-value
 ```
 
