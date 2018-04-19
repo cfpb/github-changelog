@@ -43,6 +43,17 @@ changelog -m cfpb github-changelog 1.0.0 1.0.1
 
 Will generate a markdown changelog between `1.0.0` and `1.0.1`.
 
+## GitHub Enterprise Support
+
+Use the optional `--github-base-url`, `--github-api-url`, and `--github-token` arguments to connect to a GitHub Enterprise instance. For example:
+
+```bash
+changelog owner some-repo \
+--github-base-url "https://github.company.com" \
+--github-api-url "https://github.company.com/api/v3" \
+--github-token secret-value
+```
+
 ## Getting help
 
 Please add issues to the [issue tracker](https://github.com/cfpb/wagtail-flags/issues).
