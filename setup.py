@@ -1,11 +1,19 @@
 from setuptools import find_packages, setup
 
+
+with open('README.md') as f:
+    long_description = f.read()
+
+
 setup(
     name='github-changelog',
     url='https://github.com/cfpb/github-changelog',
     author='CFPB',
     license='CC0',
-    version='1.1.0',
+    version='1.2.0',
+    description='GitHub Pull Request changelog generator',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     include_package_data=True,
     packages=find_packages(),
     install_requires=[
