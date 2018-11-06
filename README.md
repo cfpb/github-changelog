@@ -10,7 +10,7 @@ An example might look like:
 ## Installing
 
 ```
-pip install git+https://github.com/cfpb/github-changelog
+pip install github-changelog
 ```
 
 ## Using
