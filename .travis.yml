@@ -4,11 +4,11 @@ cache: pip
 matrix:
   include:
     - env: TOXENV=flake8
-      python: 3.5
+      python: 3.6
     - env: TOXENV=py27
       python: 2.7
-    - env: TOXENV=py35
-      python: 3.5
+    - env: TOXENV=py36
+      python: 3.6
 
 install:
   pip install tox coveralls
@@ -18,3 +18,13 @@ script:
 
 after_success:
   coveralls
+
+deploy:
+  provider: pypi
+  distributions: "sdist bdist_wheel --universal"
+  user: cfpb
+  password:
+    secure: "F4CZ9q72ZToy9djdi3FYa7Zimx+P/Xuf+8BNjiiNfC8zGpczbkehs6h6Ou2CvjATFyCoYnRoDMwd4WW3EkyouCpNpAkT6GDnlogN65oNl0So9xmBWaXKYN8RY43dqVgiPkMWMwSKWk9h99JMocufurNW0BVwQenPz1M9t4zIHWEo/EFxkxvVtIdO5HN9L94tDAhYrSFS2Bzn4s0XpGEBCp0TjTClPRT/pao7IBfQRgOYuXsMGwILZQ8zaU8nESjEOYtKy7M23IGHRp61znxuOMz/pgUKQEK++DLWIDkfyWSXeFXmvenSvV8XSf7voPlwkvuni/+t0LZLmvSKKWoxeGLGt+1GdM5Dtc0jYzIb9h/Y1emNGOlxgbGiB+0hRl/87r3+XIT+aqkdaOuzAd+afBu17e7AbFt7zRDZS8NbL53xDgoosjpPKiqBQdQ+5cMgiJQH+2aunwbKiUmUkERXgOPQY0B8JWoIGrkF2I/BuICPq/8MUT/D3rQ32wfsQGfWDoAzNxOyFmowkuXwuE1qccXnX/T6fqx0fU3uA2mI2KbgA/0sns3Iu2YGUafqXRwj9XMnXBZXWdZGRvhy45sLrJZI8RW2656CUjhrG2ssoIcKHIqKPZ59OWGMz+tnGA97OulGbclPAOULMRr+B8kUEanE68yB2ZMfoPF+YZBsGVc="
+  on:
+    tags: true
+    condition: $TOXENV = "py36"
