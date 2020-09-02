@@ -68,7 +68,7 @@ def get_commit_for_tag(github_config, owner, repo, tag):
     return tag_json['object']['sha']
 
 
-def get_last_commit(github_config, owner, repo, branch='master'):
+def get_last_commit(github_config, owner, repo, branch='main'):
     """ Get the last commit sha for the given repo and branch """
     commits_url = '/'.join([
         github_config.api_url,
@@ -76,7 +76,7 @@ def get_last_commit(github_config, owner, repo, branch='master'):
         owner, repo,
         'commits'
     ])
-    commits_response = requests.get(commits_url, params={'sha': 'master'},
+    commits_response = requests.get(commits_url, params={'sha': 'main'},
                                     headers=github_config.headers)
     commits_json = commits_response.json()
     if commits_response.status_code != 200:
@@ -104,7 +104,7 @@ def get_commits_between(github_config, owner, repo, first_commit, last_commit):
         'compare',
         first_commit + '...' + last_commit
     ])
-    commits_response = requests.get(commits_url, params={'sha': 'master'},
+    commits_response = requests.get(commits_url, params={'sha': 'main'},
                                     headers=github_config.headers)
     commits_json = commits_response.json()
     if commits_response.status_code != 200:
@@ -141,7 +141,7 @@ def extract_pr(message):
 
 
 def fetch_changes(github_config, owner, repo, previous_tag=None,
-                  current_tag=None, branch='master'):
+                  current_tag=None, branch='main'):
     if previous_tag is None:
         previous_tag = get_last_tag(github_config, owner, repo)
     previous_commit = get_commit_for_tag(github_config, owner, repo,
