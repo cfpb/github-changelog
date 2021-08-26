@@ -63,23 +63,23 @@ class TestChangelog(TestCase):
         }
         mock_requests_get.return_value = response
         result = get_commit_for_tag(fake_github_config, 'someone', 'one-repo',
-                                    'myorg')
+                                    'mytag')
         self.assertEqual(result, '0123456789abcdef')
 
     @mock.patch('requests.get')
     def test_get_commit_for_tag_not_found(self, mock_requests_get):
-        """ Test getting the commit sha for a tag if the tag exists """
+        """ Getting commit sha for a tag fails if tag doesn't exist """
         response = mock.MagicMock()
         response.status_code = 404
         response.json.return_value = {'message': 'nope'}
         mock_requests_get.return_value = response
         with self.assertRaises(GitHubError):
             get_commit_for_tag(fake_github_config, 'someone', 'one-repo',
-                               'myorg')
+                               'mytag')
 
     @mock.patch('requests.get')
     def test_get_commit_for_tag_tag_object(self, mock_requests_get):
-        """ Test getting the commit sha when tagged object is tag """
+        """ Test getting the commit sha when tagged object is itself a tag """
         response = mock.MagicMock()
         response.status_code = 200
         response.json.side_effect = [
@@ -92,12 +92,12 @@ class TestChangelog(TestCase):
         ]
         mock_requests_get.return_value = response
         result = get_commit_for_tag(fake_github_config, 'someone', 'one-repo',
-                                    'myorg')
+                                    'mytag')
         self.assertEqual(result, '0123456789abcdef')
 
     @mock.patch('requests.get')
     def test_get_last_commit_exists(self, mock_requests_get):
-        """ Test getting the commit sha for a tag if the tag exists """
+        """ Test getting commit sha for latest commit on the default branch """
         response = mock.MagicMock()
         response.status_code = 200
         response.json.return_value = [{'sha': '0123456789abcdef'}]
@@ -106,8 +106,19 @@ class TestChangelog(TestCase):
         self.assertEqual(result, '0123456789abcdef')
 
     @mock.patch('requests.get')
+    def test_get_last_commit_custom_branch(self, mock_requests_get):
+        """ Test getting commit sha for latest commit on a specific branch """
+        response = mock.MagicMock()
+        response.status_code = 200
+        response.json.return_value = [{'sha': '0123456789abcdef'}]
+        mock_requests_get.return_value = response
+        result = get_last_commit(fake_github_config, 'someone', 'one-repo',
+                                 'not-default-branch')
+        self.assertEqual(result, '0123456789abcdef')
+
+    @mock.patch('requests.get')
     def test_get_last_commit_not_found(self, mock_requests_get):
-        """ Test getting the commit sha for a tag if the tag exists """
+        """ Getting the commit sha for latest commit fails if no commits """
         response = mock.MagicMock()
         response.status_code = 404
         response.json.return_value = {'message': 'nope'}
