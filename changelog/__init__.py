@@ -96,7 +96,8 @@ def get_last_tag(github_config, owner, repo):
     return tags_json[0]['name']
 
 
-def get_commits_between(github_config, owner, repo, first_commit, last_commit, branch=DEFAULT_BRANCH):
+def get_commits_between(github_config, owner, repo, first_commit, last_commit,
+                        branch=DEFAULT_BRANCH):
     """ Get a list of commits between two commits """
     commits_url = '/'.join([
         github_config.api_url,
@@ -156,7 +157,8 @@ def fetch_changes(github_config, owner, repo, previous_tag=None,
         current_commit = get_last_commit(github_config, owner, repo, branch)
 
     commits_between = get_commits_between(github_config, owner, repo,
-                                          previous_commit, current_commit, branch)
+                                          previous_commit, current_commit,
+                                          branch)
 
     # Process the commit list looking for PR merges
     prs = [extract_pr(c.message) for c in commits_between if is_pr(c.message)]
@@ -187,13 +189,16 @@ def format_changes(github_config, owner, repo, prs, markdown=False):
 
 
 def generate_changelog(owner, repo, previous_tag=None, current_tag=None,
-                       markdown=False, single_line=False, branch=None, github_base_url=None,
-                       github_api_url=None, github_token=None):
+                       markdown=False, single_line=False, branch=None,
+                       github_base_url=None, github_api_url=None,
+                       github_token=None):
 
     github_config = get_github_config(github_base_url, github_api_url,
                                       github_token)
 
-    prs = fetch_changes(github_config, owner, repo, previous_tag, current_tag, branch)
+    prs = fetch_changes(
+        github_config, owner, repo, previous_tag, current_tag, branch
+    )
     lines = format_changes(github_config, owner, repo, prs, markdown=markdown)
 
     separator = '\\n' if single_line else '\n'
