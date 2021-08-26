@@ -96,8 +96,7 @@ def get_last_tag(github_config, owner, repo):
     return tags_json[0]['name']
 
 
-def get_commits_between(github_config, owner, repo, first_commit, last_commit,
-                        branch=DEFAULT_BRANCH):
+def get_commits_between(github_config, owner, repo, first_commit, last_commit):
     """ Get a list of commits between two commits """
     commits_url = '/'.join([
         github_config.api_url,
@@ -106,8 +105,7 @@ def get_commits_between(github_config, owner, repo, first_commit, last_commit,
         'compare',
         first_commit + '...' + last_commit
     ])
-    commits_response = requests.get(commits_url, params={'sha': branch},
-                                    headers=github_config.headers)
+    commits_response = requests.get(commits_url, headers=github_config.headers)
     commits_json = commits_response.json()
     if commits_response.status_code != 200:
         raise GitHubError("Unable to get commits between {} and {}. {}".format(
