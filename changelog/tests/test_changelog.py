@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import mock
 from unittest import TestCase
 
-import mock
 from changelog import (
     PUBLIC_GITHUB_API_URL,
     PUBLIC_GITHUB_URL,
@@ -10,6 +10,7 @@ from changelog import (
     PullRequest,
     extract_pr,
     format_changes,
+    generate_changelog,
     get_commit_for_tag,
     get_commits_between,
     get_github_config,
@@ -135,12 +136,12 @@ class TestChangelog(TestCase):
             'commits': [
                 {
                     'sha': '0123456789abcdef',
-                    'commit': {'message': 'Foo'},
+                    'commit': {'message': 'Foo'}
                 },
                 {
                     'sha': '123456789abcdef0',
-                    'commit': {'message': 'Bar'},
-                },
+                    'commit': {'message': 'Bar'}
+                }
             ]
         }
         mock_requests_get.return_value = response
@@ -242,3 +243,170 @@ class TestChangelog(TestCase):
             '- second [#2](https://github.company.com/owner/a-repo/pull/2)'
         ]
         self.assertEqual(actual, expected)
+
+    @mock.patch('requests.get')
+    def test_generate_changelog(self, mock_requests_get):
+        """ Test the main method that generates a changelog """
+        responses = []
+
+        get_last_tag_response = mock.MagicMock()
+        get_last_tag_response.status_code = 200
+        get_last_tag_response.json.return_value = [
+            {
+                "name": "0.1.0",
+                "commit": {
+                    "sha": "4"
+                }
+            },
+            {
+                "name": "0.0.1",
+                "commit": {
+                    "sha": "1"
+                }
+            }
+        ]
+        responses.append(get_last_tag_response)
+
+        get_commit_for_tag_response = mock.MagicMock()
+        get_commit_for_tag_response.status_code = 200
+        get_commit_for_tag_response.json.return_value = {
+            'object': {
+                'type': 'commit',
+                'sha': '4'
+            }
+        }
+        responses.append(get_commit_for_tag_response)
+
+        get_last_commit_response = mock.MagicMock()
+        get_last_commit_response.status_code = 200
+        get_last_commit_response.json.return_value = [
+            {
+                'sha': '10',
+                'commit': {
+                    'message': 'Merge pull request #1234 from some/branch'
+                               '\n\nMy Title'
+                },
+            },
+            {
+                'sha': '9',
+                'commit': {
+                    'message': 'My Title (#1234)\n\nMy description'
+                },
+            },
+            {
+                'sha': '8',
+                'commit': {
+                    'message': 'I made some changes!'
+                },
+            },
+            {
+                'sha': '7',
+                'commit': {
+                    'message': 'Merge pull request from some/branch'
+                               '\n\nMy Title'
+                },
+            },
+            {
+                'sha': '6',
+                'commit': {
+                    'message': 'Some title addresses bug (#345)'
+                },
+            },
+            {
+                'sha': '5',
+                'commit': {
+                    'message': 'Merge pull request #1234 from some/branch'
+                               '\n\nMy Title'
+                },
+            },
+            {
+                'sha': '4',
+                'commit': {
+                    'message': 'My Title (#1234)\n\nMy description'
+                },
+            },
+            {
+                'sha': '3',
+                'commit': {
+                    'message': 'I made some changes!'
+                },
+            },
+            {
+                'sha': '2',
+                'commit': {
+                    'message': 'Merge pull request from some/branch'
+                               '\n\nMy Title'
+                },
+            },
+            {
+                'sha': '1',
+                'commit': {
+                    'message': 'Some title addresses bug (#345)'
+                },
+            }
+        ]
+        responses.append(get_last_commit_response)
+
+        get_commits_between_response = mock.MagicMock()
+        get_commits_between_response.status_code = 200
+        get_commits_between_response.json.return_value = {
+            'commits': [
+                {
+                    'sha': '10',
+                    'commit': {
+                        'message': 'Merge pull request #10 from some/branch'
+                                   '\n\nMy Title'
+                    },
+                },
+                {
+                    'sha': '9',
+                    'commit': {
+                        'message': 'My Title (#9)\n\nMy description'
+                    },
+                },
+                {
+                    'sha': '8',
+                    'commit': {
+                        'message': 'I made some changes!'
+                    },
+                },
+                {
+                    'sha': '7',
+                    'commit': {
+                        'message': 'Merge pull request from some/branch'
+                                   '\n\nMy Title'
+                    },
+                },
+                {
+                    'sha': '6',
+                    'commit': {
+                        'message': 'Some title addresses bug (#6)'
+                    },
+                },
+                {
+                    'sha': '5',
+                    'commit': {
+                        'message': 'Merge pull request #5 from some/branch'
+                                   '\n\nMy Title'
+                    },
+                }
+            ]
+        }
+        responses.append(get_commits_between_response)
+
+        mock_requests_get.side_effect = responses
+        result = generate_changelog(
+            'someone',
+            'one-repo',
+            github_base_url='https://github.com',
+            github_api_url='https://api.github.com'
+        )
+
+        self.assertEqual(
+            result, (
+                '- My Title #5\n'
+                '- Some title addresses bug #6\n'
+                '- My Title #9\n'
+                '- My Title #10'
+            )
+        )
