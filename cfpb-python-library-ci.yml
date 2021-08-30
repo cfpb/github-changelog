@@ -1,0 +1,42 @@
+name: Python CI workflow
+
+on: [pull_request, push]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        # Add the appropriate Tox environments for the satellite here
+        toxenv:
+            - py36
+            - py38
+        include:
+          # Adjust the Python versions required for the tox environments as 
+          # needed
+          - toxenv: py36
+            python-version: 3.6
+          - toxenv: py38
+            python-version: 3.8
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install tox
+
+      - name: Run back-end tests
+        run: |
+          tox
+        env: 
+          TOXENV: ${{ matrix.toxenv }}
