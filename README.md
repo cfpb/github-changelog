@@ -43,6 +43,15 @@ changelog -m cfpb github-changelog 1.0.0 1.0.1
 
 Will generate a markdown changelog between `1.0.0` and `1.0.1`.
 
+## Overriding the Default Branch
+
+The default branch is set to `main`. To override this, use the optional `--branch` argument to specify a different branch. For example:
+
+```bash
+changelog owner some-repo \
+--branch "production"
+```
+
 ## GitHub Enterprise Support
 
 Use the optional `--github-base-url`, `--github-api-url`, and `--github-token` arguments to connect to a GitHub Enterprise instance. For example:
@@ -63,6 +72,7 @@ Please add issues to the [issue tracker](https://github.com/cfpb/wagtail-flags/i
 General instructions on _how_ to contribute can be found in [CONTRIBUTING](CONTRIBUTING.md).
 
 ## Open source licensing info
+
 1. [TERMS](TERMS.md)
 2. [LICENSE](LICENSE)
 3. [CFPB Source Code Policy](https://github.com/cfpb/source-code-policy/)

@@ -12,6 +12,7 @@ from collections import namedtuple
 
 import requests
 
+DEFAULT_BRANCH = 'main'
 PUBLIC_GITHUB_URL = 'https://github.com'
 PUBLIC_GITHUB_API_URL = 'https://api.github.com'
 GitHubConfig = namedtuple('GitHubConfig', ['base_url', 'api_url', 'headers'])
@@ -68,7 +69,7 @@ def get_commit_for_tag(github_config, owner, repo, tag):
     return tag_json['object']['sha']
 
 
-def get_last_commit(github_config, owner, repo, branch='main'):
+def get_last_commit(github_config, owner, repo, branch=DEFAULT_BRANCH):
     """ Get the last commit sha for the given repo and branch """
     commits_url = '/'.join([
         github_config.api_url,
@@ -76,7 +77,7 @@ def get_last_commit(github_config, owner, repo, branch='main'):
         owner, repo,
         'commits'
     ])
-    commits_response = requests.get(commits_url, params={'sha': 'main'},
+    commits_response = requests.get(commits_url, params={'sha': branch},
                                     headers=github_config.headers)
     commits_json = commits_response.json()
     if commits_response.status_code != 200:
@@ -104,8 +105,7 @@ def get_commits_between(github_config, owner, repo, first_commit, last_commit):
         'compare',
         first_commit + '...' + last_commit
     ])
-    commits_response = requests.get(commits_url, params={'sha': 'main'},
-                                    headers=github_config.headers)
+    commits_response = requests.get(commits_url, headers=github_config.headers)
     commits_json = commits_response.json()
     if commits_response.status_code != 200:
         raise GitHubError("Unable to get commits between {} and {}. {}".format(
@@ -141,7 +141,7 @@ def extract_pr(message):
 
 
 def fetch_changes(github_config, owner, repo, previous_tag=None,
-                  current_tag=None, branch='main'):
+                  current_tag=None, branch=DEFAULT_BRANCH):
     if previous_tag is None:
         previous_tag = get_last_tag(github_config, owner, repo)
     previous_commit = get_commit_for_tag(github_config, owner, repo,
@@ -186,13 +186,16 @@ def format_changes(github_config, owner, repo, prs, markdown=False):
 
 
 def generate_changelog(owner, repo, previous_tag=None, current_tag=None,
-                       markdown=False, single_line=False, github_base_url=None,
-                       github_api_url=None, github_token=None):
+                       markdown=False, single_line=False, branch=None,
+                       github_base_url=None, github_api_url=None,
+                       github_token=None):
 
     github_config = get_github_config(github_base_url, github_api_url,
                                       github_token)
 
-    prs = fetch_changes(github_config, owner, repo, previous_tag, current_tag)
+    prs = fetch_changes(
+        github_config, owner, repo, previous_tag, current_tag, branch
+    )
     lines = format_changes(github_config, owner, repo, prs, markdown=markdown)
 
     separator = '\\n' if single_line else '\n'
@@ -215,6 +218,9 @@ def main():
                         help='output in markdown')
     parser.add_argument('-s', '--single-line', action='store_true',
                         help='output as single line joined by \\n characters')
+    parser.add_argument('--branch', type=str, action='store',
+                        default=DEFAULT_BRANCH, help='Override the '
+                        'target branch (defaults to main)')
     parser.add_argument('--github-base-url', type=str, action='store',
                         default=PUBLIC_GITHUB_URL, help='Override if you '
                         'are using GitHub Enterprise. e.g. https://github.'
