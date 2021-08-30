@@ -155,8 +155,7 @@ def fetch_changes(github_config, owner, repo, previous_tag=None,
         current_commit = get_last_commit(github_config, owner, repo, branch)
 
     commits_between = get_commits_between(github_config, owner, repo,
-                                          previous_commit, current_commit,
-                                          branch)
+                                          previous_commit, current_commit)
 
     # Process the commit list looking for PR merges
     prs = [extract_pr(c.message) for c in commits_between if is_pr(c.message)]
