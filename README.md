@@ -2,7 +2,7 @@
 
 This is a small utility that generates a changelog between two git tags based on GitHub pull request titles as either plaintext or markdown.
 
-An example might look like:
+An example might look like this:
 
 - Improve test coverage for mygreatpackage.subpackage [#1234]()
 - Add support for Python 3 [#1233]()
