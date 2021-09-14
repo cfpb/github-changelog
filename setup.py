@@ -10,7 +10,7 @@ setup(
     url="https://github.com/cfpb/github-changelog",
     author="CFPB",
     license="CC0",
-    version="1.3.0",
+    version="1.4.0",
     description="GitHub Pull Request changelog generator",
     long_description=long_description,
     long_description_content_type="text/markdown",
