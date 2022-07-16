@@ -8,6 +8,7 @@ from changelog import (
     PUBLIC_GITHUB_API_URL,
     PUBLIC_GITHUB_URL,
     GitHubError,
+    ExtendedPullRequest,
     PullRequest,
     extract_pr,
     format_changes,
@@ -241,7 +242,7 @@ class TestChangelog(TestCase):
             "https://github.company.com/api/v3",
             token=None,
         )
-        prs = [PullRequest(1, "first"), PullRequest(2, "second")]
+        prs = [ExtendedPullRequest(PullRequest(1, "first"), None), ExtendedPullRequest(PullRequest(2, "second"), None)]
         actual = format_changes(
             github_config, "owner", "a-repo", prs, markdown=True
         )
@@ -369,6 +370,34 @@ class TestChangelog(TestCase):
             ]
         }
         responses.append(get_commits_between_response)
+
+        get_pr_body_response = mock.MagicMock()
+        get_pr_body_response.status_code = 200
+        get_pr_body_response.json.return_value = {
+            "body": "My Title #5"
+        }
+        responses.append(get_pr_body_response)
+
+        get_pr_body_response = mock.MagicMock()
+        get_pr_body_response.status_code = 200
+        get_pr_body_response.json.return_value = {
+            "body": "My Title #5"
+        }
+        responses.append(get_pr_body_response)
+
+        get_pr_body_response = mock.MagicMock()
+        get_pr_body_response.status_code = 200
+        get_pr_body_response.json.return_value = {
+            "body": "My Title #5"
+        }
+        responses.append(get_pr_body_response)
+
+        get_pr_body_response = mock.MagicMock()
+        get_pr_body_response.status_code = 200
+        get_pr_body_response.json.return_value = {
+            "body": "My Title #5"
+        }
+        responses.append(get_pr_body_response)
 
         mock_requests_get.side_effect = responses
         result = generate_changelog(
