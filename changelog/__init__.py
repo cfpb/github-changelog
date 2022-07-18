@@ -20,12 +20,16 @@ GitHubConfig = namedtuple("GitHubConfig", ["base_url", "api_url", "headers"])
 
 Commit = namedtuple("Commit", ["sha", "message"])
 PullRequest = namedtuple("PullRequest", ["number", "title"])
+ExtendedPullRequest = namedtuple("ExtendedPullRequest", ["pr", "changelog"])
 
 # Merge commits use a double linebreak between the branch name and the title
 MERGE_PR_RE = re.compile(r"^Merge pull request #([0-9]+) from .*\n\n(.*)")
 
 # Squash-and-merge commits use the PR title with the number in parentheses
 SQUASH_PR_RE = re.compile(r"^(.*) \(#([0-9]+)\).*")
+
+# Changelog Identifier Regex. Ex.: CHANGELOG: Added some stuff
+CHANGELOG_RE = re.compile(r"^CHANGELOG:\s?(.*)", re.MULTILINE)
 
 
 class GitHubError(Exception):
@@ -139,6 +143,40 @@ def get_commits_between(github_config, owner, repo, first_commit, last_commit):
     return commits
 
 
+def get_pr_body(github_config, owner, repo, pr_number):
+    """Get the body of the identified PR"""
+    pr_url = "/".join(
+        [
+            github_config.api_url,
+            "repos",
+            owner,
+            repo,
+            "pulls",
+            pr_number,
+        ]
+    )
+    pr_response = requests.get(pr_url, headers=github_config.headers)
+    pr_json = pr_response.json()
+    if pr_response.status_code != 200:
+        raise GitHubError(
+            "Unable to get PR # {}. {}".format(
+                pr_number, pr_response["message"]
+            )
+        )
+
+    return pr_json["body"]
+
+
+def extract_changelog(pr_body):
+    """Extracts the Changelog from the PR Body"""
+    changelog_match = CHANGELOG_RE.search(pr_body)
+    try:
+        [changelog] = changelog_match.groups()
+        return changelog
+    except:
+        return None
+
+
 def is_pr(message):
     """Determine whether or not a commit message is a PR merge"""
     return MERGE_PR_RE.search(message) or SQUASH_PR_RE.search(message)
@@ -188,19 +226,28 @@ def fetch_changes(
     # Process the commit list looking for PR merges
     prs = [extract_pr(c.message) for c in commits_between if is_pr(c.message)]
 
-    if len(prs) == 0 and len(commits_between) > 0:
+    extended_prs = []
+
+    for pr in prs:
+        pr_body = get_pr_body(github_config, owner, repo, pr.number)
+        extended_prs.append(
+            ExtendedPullRequest(pr, extract_changelog(pr_body))
+        )
+
+    if len(extended_prs) == 0 and len(commits_between) > 0:
         raise Exception(
             "Lots of commits and no PRs on branch {}".format(branch)
         )
 
-    prs.reverse()
-    return prs
+    extended_prs.reverse()
+    return extended_prs
 
 
 def format_changes(github_config, owner, repo, prs, markdown=False):
     """Format the list of prs in either text or markdown"""
     lines = []
-    for pr in prs:
+    for extended_pr in prs:
+        pr = extended_pr.pr
         number = "#{number}".format(number=pr.number)
         if markdown:
             link = "{github_url}/{owner}/{repo}/pull/{number}".format(
@@ -210,9 +257,16 @@ def format_changes(github_config, owner, repo, prs, markdown=False):
                 number=pr.number,
             )
             number = "[{number}]({link})".format(number=number, link=link)
-
+        description = (
+            extended_pr.changelog
+            if extended_pr.changelog != None
+            else pr.title
+        )
         lines.append(
-            "- {title} {number}".format(title=pr.title, number=number)
+            "- {description} {number}".format(
+                description=description,
+                number=number,
+            )
         )
 
     return lines
