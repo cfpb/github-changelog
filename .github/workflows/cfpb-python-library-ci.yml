@@ -10,13 +10,13 @@ jobs:
       matrix:
         # Add the appropriate Tox environments for the satellite here
         toxenv:
-            - py36
+            # - py36
             - py38
         include:
           # Adjust the Python versions required for the tox environments as 
           # needed
-          - toxenv: py36
-            python-version: 3.6
+          # - toxenv: py36
+            # python-version: 3.6
           - toxenv: py38
             python-version: 3.8
 
