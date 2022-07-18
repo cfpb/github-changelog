@@ -20,7 +20,8 @@ GitHubConfig = namedtuple("GitHubConfig", ["base_url", "api_url", "headers"])
 
 Commit = namedtuple("Commit", ["sha", "message"])
 PullRequest = namedtuple("PullRequest", ["number", "title"])
-ExtendedPullRequest = namedtuple("ExtendedPullRequest", ["pr", "changelog"])
+PullRequestDetails = namedtuple("PullRequestDetails", ["body", "labels"])
+ExtendedPullRequest = namedtuple("ExtendedPullRequest", ["pr", "details"])
 
 # Merge commits use a double linebreak between the branch name and the title
 MERGE_PR_RE = re.compile(r"^Merge pull request #([0-9]+) from .*\n\n(.*)")
@@ -30,6 +31,23 @@ SQUASH_PR_RE = re.compile(r"^(.*) \(#([0-9]+)\).*")
 
 # Changelog Identifier Regex. Ex.: CHANGELOG: Added some stuff
 CHANGELOG_RE = re.compile(r"^CHANGELOG:\s?(.*)", re.MULTILINE)
+
+# PR labels for Semantic Versioning Changeset detection
+LABEL_LEVELS = {
+    "patch": 3,
+    "hotfix": 3,
+    "fix": 3,
+    "minor": 2,
+    "feature": 2,
+    "breaking": 1,
+    "major": 1,
+}
+
+CHANGELOG_LEVEL_MESSAGE = {
+    1: "MAJOR RELEASE",
+    2: "MINOR RELEASE",
+    3: "PATCH RELEASE",
+}
 
 
 class GitHubError(Exception):
@@ -143,7 +161,7 @@ def get_commits_between(github_config, owner, repo, first_commit, last_commit):
     return commits
 
 
-def get_pr_body(github_config, owner, repo, pr_number):
+def get_pr_details(github_config, owner, repo, pr_number):
     """Get the body of the identified PR"""
     pr_url = "/".join(
         [
@@ -164,13 +182,15 @@ def get_pr_body(github_config, owner, repo, pr_number):
             )
         )
 
-    return pr_json["body"]
+    return PullRequestDetails(body=pr_json["body"], labels=pr_json["labels"])
 
 
 def extract_changelog(pr_body):
     """Extracts the Changelog from the PR Body"""
-    changelog_match = CHANGELOG_RE.search(pr_body)
+    if pr_body == None:
+        return None
     try:
+        changelog_match = CHANGELOG_RE.search(pr_body)
         [changelog] = changelog_match.groups()
         return changelog
     except:
@@ -226,13 +246,12 @@ def fetch_changes(
     # Process the commit list looking for PR merges
     prs = [extract_pr(c.message) for c in commits_between if is_pr(c.message)]
 
-    extended_prs = []
-
-    for pr in prs:
-        pr_body = get_pr_body(github_config, owner, repo, pr.number)
-        extended_prs.append(
-            ExtendedPullRequest(pr, extract_changelog(pr_body))
+    extended_prs = [
+        ExtendedPullRequest(
+            pr, get_pr_details(github_config, owner, repo, pr.number)
         )
+        for pr in prs
+    ]
 
     if len(extended_prs) == 0 and len(commits_between) > 0:
         raise Exception(
@@ -246,6 +265,7 @@ def fetch_changes(
 def format_changes(github_config, owner, repo, prs, markdown=False):
     """Format the list of prs in either text or markdown"""
     lines = []
+    change_level = 3
     for extended_pr in prs:
         pr = extended_pr.pr
         number = "#{number}".format(number=pr.number)
@@ -257,17 +277,19 @@ def format_changes(github_config, owner, repo, prs, markdown=False):
                 number=pr.number,
             )
             number = "[{number}]({link})".format(number=number, link=link)
-        description = (
-            extended_pr.changelog
-            if extended_pr.changelog != None
-            else pr.title
-        )
+
+        pr_changelog_description = extract_changelog(extended_pr.details.body)
+        for label in extended_pr.details.labels or []:
+            change_level = min(change_level, LABEL_LEVELS[label])
         lines.append(
             "- {description} {number}".format(
-                description=description,
+                description=pr_changelog_description
+                if pr_changelog_description != None
+                else pr.title,
                 number=number,
             )
         )
+    lines.insert(0, CHANGELOG_LEVEL_MESSAGE[change_level])
 
     return lines
 

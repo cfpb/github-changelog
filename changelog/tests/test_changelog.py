@@ -9,6 +9,7 @@ from changelog import (
     PUBLIC_GITHUB_URL,
     GitHubError,
     ExtendedPullRequest,
+    PullRequestDetails,
     PullRequest,
     extract_pr,
     format_changes,
@@ -17,7 +18,7 @@ from changelog import (
     get_commits_between,
     get_github_config,
     get_last_commit,
-    get_pr_body,
+    get_pr_details,
     is_pr,
 )
 
@@ -179,26 +180,32 @@ class TestChangelog(TestCase):
             )
 
     @mock.patch("requests.get")
-    def test_get_pr_body(self, mock_requests_get):
-        """Test getting the body of the PR numbered"""
+    def test_get_pr_details(self, mock_requests_get):
+        """Test getting the details of the PR numbered"""
         response = mock.MagicMock()
         response.status_code = 200
         response.json.return_value = {
-            "body": "Here comes the details of the PR"
+            "body": "Here comes the details of the PR",
+            "labels": ["test", "BREAKING"],
         }
         mock_requests_get.return_value = response
-        result = get_pr_body(fake_github_config, "someone", "one-repo", "1")
-        self.assertEqual(result, "Here comes the details of the PR")
+        result = get_pr_details(fake_github_config, "someone", "one-repo", "1")
+        self.assertEqual(
+            result,
+            PullRequestDetails(
+                "Here comes the details of the PR", ["test", "BREAKING"]
+            ),
+        )
 
     @mock.patch("requests.get")
-    def test_get_pr_body_not_found(self, mock_requests_get):
+    def test_get_pr_details_not_found(self, mock_requests_get):
         """Test getting the body of the PR numbered"""
         response = mock.MagicMock()
         response.status_code = 404
         response.json.return_value = {"message": "Not Found"}
         mock_requests_get.return_value = response
         with self.assertRaises(GitHubError):
-            get_pr_body(fake_github_config, "someone", "one-repo", "1")
+            get_pr_details(fake_github_config, "someone", "one-repo", "1")
 
     def test_is_pr_merge(self):
         """Test our PR extractor with merge PRa"""
@@ -266,13 +273,18 @@ class TestChangelog(TestCase):
             token=None,
         )
         prs = [
-            ExtendedPullRequest(PullRequest(1, "first"), None),
-            ExtendedPullRequest(PullRequest(2, "second"), None),
+            ExtendedPullRequest(
+                PullRequest(1, "first"), PullRequestDetails(None, None)
+            ),
+            ExtendedPullRequest(
+                PullRequest(2, "second"), PullRequestDetails(None, None)
+            ),
         ]
         actual = format_changes(
             github_config, "owner", "a-repo", prs, markdown=True
         )
         expected = [
+            "PATCH RELEASE",
             "- first [#1](https://github.company.com/owner/a-repo/pull/1)",
             "- second [#2](https://github.company.com/owner/a-repo/pull/2)",
         ]
@@ -397,27 +409,37 @@ class TestChangelog(TestCase):
         }
         responses.append(get_commits_between_response)
 
-        get_pr_body_response = mock.MagicMock()
-        get_pr_body_response.status_code = 200
-        get_pr_body_response.json.return_value = {
-            "body": "My Title #10\n\nCHANGELOG: Specific ChangeLog description"
+        get_pr_details_response = mock.MagicMock()
+        get_pr_details_response.status_code = 200
+        get_pr_details_response.json.return_value = {
+            "body": "My Title #10\n\nCHANGELOG: Specific ChangeLog description",
+            "labels": [],
         }
-        responses.append(get_pr_body_response)
+        responses.append(get_pr_details_response)
 
-        get_pr_body_response = mock.MagicMock()
-        get_pr_body_response.status_code = 200
-        get_pr_body_response.json.return_value = {"body": "PR body content"}
-        responses.append(get_pr_body_response)
+        get_pr_details_response = mock.MagicMock()
+        get_pr_details_response.status_code = 200
+        get_pr_details_response.json.return_value = {
+            "body": "PR body content",
+            "labels": [],
+        }
+        responses.append(get_pr_details_response)
 
-        get_pr_body_response = mock.MagicMock()
-        get_pr_body_response.status_code = 200
-        get_pr_body_response.json.return_value = {"body": "PR body content"}
-        responses.append(get_pr_body_response)
+        get_pr_details_response = mock.MagicMock()
+        get_pr_details_response.status_code = 200
+        get_pr_details_response.json.return_value = {
+            "body": "PR body content",
+            "labels": [],
+        }
+        responses.append(get_pr_details_response)
 
-        get_pr_body_response = mock.MagicMock()
-        get_pr_body_response.status_code = 200
-        get_pr_body_response.json.return_value = {"body": "PR body content"}
-        responses.append(get_pr_body_response)
+        get_pr_details_response = mock.MagicMock()
+        get_pr_details_response.status_code = 200
+        get_pr_details_response.json.return_value = {
+            "body": "PR body content",
+            "labels": [],
+        }
+        responses.append(get_pr_details_response)
 
         mock_requests_get.side_effect = responses
         result = generate_changelog(
@@ -430,6 +452,7 @@ class TestChangelog(TestCase):
         self.assertEqual(
             result,
             (
+                "PATCH RELEASE\n"
                 "- My Title #5\n"
                 "- Some title addresses bug #6\n"
                 "- My Title #9\n"
