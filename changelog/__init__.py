@@ -175,9 +175,13 @@ def fetch_changes(
 
     current_commit = None
     if current_tag is not None:
-        current_commit = get_commit_for_tag(
-            github_config, owner, repo, current_tag
-        )
+        try:
+            current_commit = get_commit_for_tag(
+                github_config, owner, repo, current_tag
+            )
+        except GitHubError:
+            # Try to proceed with the given "tag" as a commit sha
+            current_commit = current_tag
     else:
         current_commit = get_last_commit(github_config, owner, repo, branch)
 
